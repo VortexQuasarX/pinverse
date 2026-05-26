@@ -1,0 +1,86 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { db } from '@/lib/db'
+import { getSession } from '@/lib/auth'
+
+export async function POST(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getSession()
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { id: pinId } = await params
+
+    // Check if pin exists
+    const pin = await db.pin.findUnique({ where: { id: pinId } })
+    if (!pin) {
+      return NextResponse.json({ error: 'Pin not found' }, { status: 404 })
+    }
+
+    // Toggle: if already liked, unlike; otherwise, like
+    const existingLike = await db.like.findUnique({
+      where: { userId_pinId: { userId: session.id, pinId } },
+    })
+
+    let liked: boolean
+
+    if (existingLike) {
+      await db.like.delete({
+        where: { userId_pinId: { userId: session.id, pinId } },
+      })
+      liked = false
+    } else {
+      await db.like.create({
+        data: { userId: session.id, pinId },
+      })
+      liked = true
+    }
+
+    const likesCount = await db.like.count({ where: { pinId } })
+
+    return NextResponse.json({ liked, likesCount })
+  } catch (error) {
+    console.error('Error toggling like:', error)
+    return NextResponse.json(
+      { error: 'Failed to toggle like' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getSession()
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { id: pinId } = await params
+
+    const existingLike = await db.like.findUnique({
+      where: { userId_pinId: { userId: session.id, pinId } },
+    })
+
+    if (existingLike) {
+      await db.like.delete({
+        where: { userId_pinId: { userId: session.id, pinId } },
+      })
+    }
+
+    const likesCount = await db.like.count({ where: { pinId } })
+
+    return NextResponse.json({ liked: false, likesCount })
+  } catch (error) {
+    console.error('Error unliking pin:', error)
+    return NextResponse.json(
+      { error: 'Failed to unlike pin' },
+      { status: 500 }
+    )
+  }
+}

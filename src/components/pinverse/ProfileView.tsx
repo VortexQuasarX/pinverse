@@ -1,0 +1,262 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
+import { ArrowLeft, MapPin, Calendar, Link as LinkIcon } from 'lucide-react'
+import { useViewStore } from '@/stores/view-store'
+import { useAuthStore, type AuthUser } from '@/stores/auth-store'
+import { usePinStore, type PinData } from '@/stores/pin-store'
+import { Button } from '@/components/ui/button'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { PinCard } from './PinCard'
+import { Skeleton } from '@/components/ui/skeleton'
+import { formatDistanceToNow } from 'date-fns'
+
+interface UserProfile {
+  id: string
+  name: string
+  email: string
+  avatar: string | null
+  bio: string | null
+  createdAt: string
+  _count: {
+    pins: number
+    followers: number
+    following: number
+  }
+  isFollowing?: boolean
+}
+
+export function ProfileView() {
+  const { selectedUserId, goHome } = useViewStore()
+  const { user: currentUser } = useAuthStore()
+  const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [userPins, setUserPins] = useState<PinData[]>([])
+  const [savedPins, setSavedPins] = useState<PinData[]>([])
+  const [loading, setLoading] = useState(true)
+  const [isFollowing, setIsFollowing] = useState(false)
+  const [followLoading, setFollowLoading] = useState(false)
+
+  const isOwnProfile = currentUser?.id === selectedUserId
+
+  useEffect(() => {
+    if (!selectedUserId) return
+
+    const fetchProfile = async () => {
+      setLoading(true)
+      try {
+        const res = await fetch(`/api/users/${selectedUserId}`)
+        if (res.ok) {
+          const data = await res.json()
+          setProfile(data)
+          setIsFollowing(data.isFollowing || false)
+        }
+      } catch {
+        // silently fail
+      }
+      setLoading(false)
+    }
+
+    const fetchUserPins = async () => {
+      try {
+        const res = await fetch(`/api/users/${selectedUserId}/pins?limit=50`)
+        if (res.ok) {
+          const data = await res.json()
+          setUserPins(data.pins || [])
+        }
+      } catch {
+        // silently fail
+      }
+    }
+
+    const fetchSavedPins = async () => {
+      if (!isOwnProfile) return
+      try {
+        const res = await fetch(`/api/users/${selectedUserId}/saved?limit=50`)
+        if (res.ok) {
+          const data = await res.json()
+          setSavedPins(data.pins || [])
+        }
+      } catch {
+        // silently fail
+      }
+    }
+
+    fetchProfile()
+    fetchUserPins()
+    fetchSavedPins()
+  }, [selectedUserId, isOwnProfile])
+
+  const handleFollowToggle = async () => {
+    if (!currentUser || !selectedUserId) return
+    setFollowLoading(true)
+    try {
+      const res = await fetch(`/api/users/${selectedUserId}/follow`, { method: 'POST' })
+      if (res.ok) {
+        const data = await res.json()
+        setIsFollowing(data.following)
+        if (profile) {
+          setProfile({
+            ...profile,
+            _count: {
+              ...profile._count,
+              followers: data.followersCount,
+            },
+          })
+        }
+      }
+    } catch {
+      // silently fail
+    }
+    setFollowLoading(false)
+  }
+
+  if (loading) {
+    return <ProfileSkeleton />
+  }
+
+  if (!profile) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <p className="text-muted-foreground">User not found</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-6">
+      <Button variant="ghost" size="sm" onClick={goHome} className="mb-4 -ml-2">
+        <ArrowLeft className="w-4 h-4 mr-1" />
+        Back
+      </Button>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        {/* Profile Header */}
+        <div className="text-center mb-8">
+          <Avatar className="w-24 h-24 mx-auto mb-4">
+            <AvatarImage src={profile.avatar || undefined} />
+            <AvatarFallback className="text-2xl bg-red-100 text-red-600 font-bold">
+              {profile.name?.charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+
+          <h1 className="text-2xl font-bold">{profile.name}</h1>
+          <p className="text-muted-foreground text-sm">{profile.email}</p>
+
+          {profile.bio && (
+            <p className="mt-2 text-sm max-w-md mx-auto">{profile.bio}</p>
+          )}
+
+          {/* Stats */}
+          <div className="flex items-center justify-center gap-6 mt-4">
+            <div className="text-center">
+              <p className="font-bold text-lg">{profile._count.pins}</p>
+              <p className="text-xs text-muted-foreground">Pins</p>
+            </div>
+            <div className="text-center">
+              <p className="font-bold text-lg">{profile._count.followers}</p>
+              <p className="text-xs text-muted-foreground">Followers</p>
+            </div>
+            <div className="text-center">
+              <p className="font-bold text-lg">{profile._count.following}</p>
+              <p className="text-xs text-muted-foreground">Following</p>
+            </div>
+          </div>
+
+          {/* Follow / Edit Button */}
+          <div className="mt-4">
+            {!isOwnProfile && currentUser && (
+              <Button
+                onClick={handleFollowToggle}
+                className={`rounded-full font-semibold ${
+                  isFollowing
+                    ? 'bg-muted text-foreground hover:bg-muted/80'
+                    : 'bg-red-500 hover:bg-red-600 text-white'
+                }`}
+                disabled={followLoading}
+              >
+                {isFollowing ? 'Unfollow' : 'Follow'}
+              </Button>
+            )}
+            {isOwnProfile && (
+              <p className="text-xs text-muted-foreground">
+                <Calendar className="w-3 h-3 inline mr-1" />
+                Joined {formatDistanceToNow(new Date(profile.createdAt), { addSuffix: true })}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Pins Tabs */}
+        <Tabs defaultValue="pins" className="w-full">
+          <TabsList className="w-full justify-center mb-6 bg-transparent">
+            <TabsTrigger value="pins" className="rounded-full data-[state=active]:bg-foreground data-[state=active]:text-background">
+              Pins
+            </TabsTrigger>
+            {isOwnProfile && (
+              <TabsTrigger value="saved" className="rounded-full data-[state=active]:bg-foreground data-[state=active]:text-background">
+                Saved
+              </TabsTrigger>
+            )}
+          </TabsList>
+
+          <TabsContent value="pins">
+            {userPins.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">
+                  {isOwnProfile ? "You haven't created any pins yet" : "No pins yet"}
+                </p>
+              </div>
+            ) : (
+              <div className="columns-2 sm:columns-3 md:columns-4 gap-4">
+                {userPins.map((pin, i) => (
+                  <PinCard key={pin.id} pin={pin} index={i} />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          {isOwnProfile && (
+            <TabsContent value="saved">
+              {savedPins.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">No saved pins yet</p>
+                </div>
+              ) : (
+                <div className="columns-2 sm:columns-3 md:columns-4 gap-4">
+                  {savedPins.map((pin, i) => (
+                    <PinCard key={pin.id} pin={pin} index={i} />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          )}
+        </Tabs>
+      </motion.div>
+    </div>
+  )
+}
+
+function ProfileSkeleton() {
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-6">
+      <div className="text-center mb-8">
+        <Skeleton className="w-24 h-24 rounded-full mx-auto mb-4" />
+        <Skeleton className="h-8 w-40 mx-auto mb-2" />
+        <Skeleton className="h-4 w-60 mx-auto" />
+        <div className="flex items-center justify-center gap-6 mt-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="text-center">
+              <Skeleton className="h-6 w-8 mx-auto mb-1" />
+              <Skeleton className="h-3 w-12 mx-auto" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
