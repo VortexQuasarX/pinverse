@@ -130,7 +130,7 @@ async function main() {
 
   // Create pins
   const allUsers = [demoUser, ...users]
-  const pins = []
+  const pins: any[] = []
 
   for (let i = 0; i < PIN_TITLES.length; i++) {
     const author = allUsers[i % allUsers.length]
