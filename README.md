@@ -1,212 +1,103 @@
-# Pinverse
+# 📌 Pinverse — Full-Stack Visual Discovery Platform
 
-A Pinterest-inspired visual discovery platform built with **Next.js 16**, **TypeScript**, **Tailwind CSS 4**, **shadcn/ui**, **Prisma ORM**, and **Framer Motion**.
-
-Discover, save, and share creative ideas in a beautiful, responsive interface.
+A premium, highly interactive, and professionally engineered **Pinterest-inspired full-stack web application**. Built using **Next.js 16 (App Router, Turbopack)**, **TypeScript**, **Tailwind CSS 4**, **shadcn/ui**, **Prisma ORM**, **Framer Motion**, and a secure **cookie-based JWT authentication session system**.
 
 ---
 
-## Features
+## 🎨 Implemented Features & Core Stack
 
-- **Pin Discovery** — Masonry grid layout with category filtering and search
-- **Pin Creation** — Upload images with titles, descriptions, and categories
-- **Boards** — Organize pins into custom boards (public or private)
-- **Social** — Like, save, comment, and follow other creators
-- **Notifications** — Real-time notification bell with unread counts
-- **Dark Mode** — System-aware dark/light theme toggle
-- **Responsive** — Mobile-first design that works on all screen sizes
-- **Authentication** — Secure JWT-based auth with cookie sessions
+### 🚀 Key Capabilities Developed
+
+```mermaid
+graph TD
+    A[Client Browser] -->|Requests & State| B(Zustand State Stores)
+    B -->|Interactive Views| C[Framer Motion Animations]
+    B -->|REST API Requests| D[Next.js Serverless Route Handlers]
+    D -->|JWT Cookie Validation| E{Auth Middleware}
+    E -->|Authorized| F[Prisma Client Layer]
+    F -->|SQLite / Postgresql| G[(Custom Database)]
+```
+
+*   **📌 Beautiful Masonry Feed Layout:** Custom multi-column grid layout built utilizing dynamic pure CSS column scaling rather than heavy JS computations, rendering fluidly across all viewport break-points.
+*   **🔄 Infinite Scrolling Feed:** Employs browser-native `IntersectionObserver` API targets to query paginated REST feed requests dynamically as the user scrolls down, offering responsive loading using skeleton state blocks.
+*   **🔒 Complete JWT Authentication:** Secure cookie-based sign-in and sign-up with password hashing (`SHA-256` + salt), custom CSRF protection, request rate limiting, and automated auth-state routing hooks.
+*   **📁 Boards & Organizational Folders:** Multi-board organization system allowing creators to bookmark public or private folders containing custom assortments of saved visual assets.
+*   **💬 Modern Social Interactions:** Real-time-ready notification delivery metrics, follow/unfollow states between profile creators, instant likes toggling, and comment feeds for all assets.
+*   **🌓 Unified Systems Dark Mode:** System-adaptive theme-switch state handlers utilizing customized standard CSS variable variables that match design components flawlessly without hydration flash errors.
 
 ---
 
-## Quick Start (Local Development)
-
-### Prerequisites
-
-- [Bun](https://bun.sh) (recommended) or Node.js 18+
-- Git
-
-### 1. Clone & Install
-
-```bash
-# If you downloaded the workspace ZIP, extract it and cd into the folder
-cd pinverse
-
-# Install dependencies
-bun install
-```
-
-### 2. Set Up Environment
-
-```bash
-# Copy the example env file
-cp .env.example .env
-```
-
-The default `.env` is pre-configured for local development with SQLite. **No changes needed** to run locally.
-
-### 3. Initialize Database
-
-```bash
-# Push the Prisma schema to create the SQLite database
-bun run db:push
-
-# Seed the database with demo data
-bun run db:seed
-```
-
-This creates a demo account:
-- **Email:** `demo@pinverse.com`
-- **Password:** `demo123`
-
-### 4. Start Development Server
-
-```bash
-bun run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser. That's it!
-
----
-
-## Project Structure
+## 📁 Repository Directory Maps
 
 ```
 pinverse/
 ├── prisma/
-│   ├── schema.prisma          # Database schema (8 models)
-│   └── seed.ts                # Demo data seeder
+│   ├── schema.prisma          # Clean, 8-Model Database Structure
+│   └── seed.ts                # Rich, High-quality Demo Seeder Script
 ├── src/
 │   ├── app/
-│   │   ├── layout.tsx         # Root layout (fonts, theme, SEO)
-│   │   ├── page.tsx           # Main SPA page
-│   │   ├── globals.css        # Global styles
-│   │   └── api/               # API routes (auth, pins, boards, etc.)
+│   │   ├── layout.tsx         # Top-Level Layout (Providers, Fonts, SEO)
+│   │   ├── page.tsx           # Single-Page App Core Controller
+│   │   └── api/               # Complete REST API Route Controllers
 │   ├── components/
-│   │   ├── pinverse/          # App-specific components
-│   │   │   ├── Header.tsx     # Navigation, search, notifications
-│   │   │   ├── MasonryGrid.tsx
-│   │   │   ├── PinCard.tsx
-│   │   │   ├── PinDetailView.tsx
-│   │   │   ├── CreatePinView.tsx
-│   │   │   ├── ProfileView.tsx
-│   │   │   ├── BoardsView.tsx
-│   │   │   ├── BoardDetailView.tsx
-│   │   │   └── AuthViews.tsx
-│   │   ├── providers/         # Theme provider
-│   │   └── ui/                # shadcn/ui components (40+)
-│   ├── stores/                # Zustand state management
-│   │   ├── auth-store.ts      # Auth state & actions
-│   │   ├── pin-store.ts       # Pins CRUD & pagination
-│   │   ├── view-store.ts      # SPA navigation state
-│   │   └── notification-store.ts
-│   ├── lib/
-│   │   ├── auth.ts            # JWT auth (jose)
-│   │   ├── db.ts              # Prisma client singleton
-│   │   ├── storage.ts         # Local + S3 storage providers
-│   │   ├── password.ts        # SHA-256 + salt hashing
-│   │   ├── rate-limit.ts      # In-memory rate limiter
-│   │   ├── csrf.ts            # CSRF token protection
-│   │   └── notify.ts          # Notification push (optional)
-│   └── proxy.ts               # Next.js 16 proxy (security headers)
-├── mini-services/
-│   └── realtime-service/      # Socket.io server (optional)
-├── public/
-│   └── uploads/               # Local image uploads
-├── db/
-│   └── custom.db              # SQLite database
-├── .env                       # Environment variables
-├── .env.example               # Template for env vars
-├── next.config.ts             # Next.js configuration
-├── tailwind.config.ts         # Tailwind CSS config
-└── package.json
+│   │   ├── pinverse/          # Custom Platform Views (Feed, detail, auth, boards, etc.)
+│   │   └── ui/                # Base Components (Fully Reusable)
+│   ├── stores/                # Zustand client state-management stores
+│   └── lib/                   # Security handlers, session tokens, local/S3 storage providers
+├── public/                    # Image assets & localized media storage
+└── package.json               # Package dependencies configuration
 ```
 
 ---
 
-## Tech Stack
+## ⚙️ Quick Start Local Setup
 
-| Category | Technology |
-|----------|-----------|
-| **Framework** | Next.js 16 (App Router, Turbopack) |
-| **Language** | TypeScript 5 |
-| **Styling** | Tailwind CSS 4 + shadcn/ui |
-| **Database** | Prisma ORM (SQLite locally, PostgreSQL for production) |
-| **Auth** | JWT (jose) with httpOnly cookies |
-| **State** | Zustand |
-| **Animations** | Framer Motion |
-| **Icons** | Lucide React |
-| **Images** | Sharp (processing), AWS S3 (production storage) |
-| **Realtime** | Socket.io (optional microservice) |
+### 1️⃣ Dependencies & Environment Settings
+Install package dependencies using [Bun](https://bun.sh) (recommended for speeds) or Node.js 18+:
+```bash
+# Install NPM modules
+bun install
 
----
+# Initialize local environment vars template
+cp .env.example .env
+```
 
-## Available Scripts
+### 2️⃣ Initialize Database Schema
+Generate database client bindings and seed local SQLite models instantly:
+```bash
+# Auto-generate DB structures and create database custom file
+bun run db:push
 
-| Command | Description |
-|---------|-------------|
-| `bun run dev` | Start development server on port 3000 |
-| `bun run build` | Generate Prisma client + build for production |
-| `bun run lint` | Run ESLint checks |
-| `bun run db:push` | Push schema changes to database |
-| `bun run db:generate` | Generate Prisma client |
-| `bun run db:migrate` | Create and apply migrations |
-| `bun run db:seed` | Seed database with demo data |
-| `bun run db:reset` | Reset database and re-seed |
+# Populate database models with high-quality mockup data
+bun run db:seed
+```
 
----
+This creates a main active demo user profile for immediate evaluations:
+*   **📧 Email Credentials:** `demo@pinverse.com`
+*   **🔑 Password:** `demo123`
 
-## Deploying to Production (Vercel + Supabase + S3)
-
-For production deployment, see [DEPLOY.md](./DEPLOY.md) for the full step-by-step guide.
-
-### Quick Summary
-
-1. **Database:** Switch from SQLite to Supabase PostgreSQL
-   - Update `prisma/schema.prisma`: change `provider = "sqlite"` to `provider = "postgresql"`
-   - Set `DATABASE_URL` to your Supabase connection string
-
-2. **Image Storage:** Switch from local to AWS S3
-   - Set `STORAGE_PROVIDER="s3"` in environment variables
-   - Provide AWS S3 credentials
-
-3. **Deploy to Vercel:**
-   - Push code to GitHub
-   - Import repo in Vercel
-   - Add all environment variables from `.env.example`
+### 3️⃣ Fire Up Local Development Server
+```bash
+bun run dev
+```
+Open **[http://localhost:3000](http://localhost:3000)** inside your browser. Enjoy a smooth, professional Pinterest experience!
 
 ---
 
-## Environment Variables
+## 🚀 Technical Architecture Overview
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `DATABASE_URL` | Yes | `file:./db/custom.db` | Database connection string |
-| `JWT_SECRET` | Yes | — | Secret for signing JWT tokens |
-| `STORAGE_PROVIDER` | No | `local` | `local` or `s3` |
-| `AWS_ACCESS_KEY_ID` | S3 only | — | AWS access key |
-| `AWS_SECRET_ACCESS_KEY` | S3 only | — | AWS secret key |
-| `AWS_S3_BUCKET_NAME` | S3 only | — | S3 bucket name |
-| `AWS_REGION` | S3 only | `ap-south-1` | AWS region |
-| `NEXT_PUBLIC_URL` | No | `http://localhost:3000` | App URL for SEO |
+| Element Layer | Technology Integrated | Purpose |
+| :--- | :--- | :--- |
+| **User Interface** | Tailwind CSS 4 + Framer Motion | Offers glassmorphism panels, interactive toasts, fluid column cards, and premium transition animations. |
+| **Logic & State** | React 19 + Zustand Stores | Centralizes application interactions, handling API responses and mutations seamlessly behind clean client hooks. |
+| **Database ORM** | Prisma Client (SQLite local / PostgreSQL prod) | Highly portable SQL mapping models managing 8 structural entities (Users, Pins, Boards, Follows, Likes, Comments, Saves, Notifications). |
+| **Server Backend** | Next.js App Router (Node.js API Helpers) | Handles secure uploads with magic-byte checkers, tokens parsing, and paginated feed data extraction. |
+| **Security Layer** | httpOnly JWT Cookies + CSRF Protection | Guards state variables and prevents malicious actions through rate limiters and signature validation blocks. |
 
 ---
 
-## Demo Accounts
+## 🌐 Production Cloud Deployments
 
-After seeding, these accounts are available:
-
-| Email | Password | Description |
-|-------|----------|-------------|
-| `demo@pinverse.com` | `demo123` | Main demo user with boards and notifications |
-| `creator1@pinverse.com` | `password123` | Sample creator |
-| `creator2@pinverse.com` | `password123` | Sample creator |
-| `creator3@pinverse.com` | `password123` | Sample creator |
-| `creator4@pinverse.com` | `password123` | Sample creator |
-| `creator5@pinverse.com` | `password123` | Sample creator |
-
----
-
-## License
-
-MIT
+1.  **Database Migration:** Change `provider` to `"postgresql"` inside `prisma/schema.prisma` and connect to your hosted PostgreSQL database (e.g. Supabase).
+2.  **AWS S3 Storage Integration:** Add `STORAGE_PROVIDER="s3"` in environment variables along with your Amazon S3 credentials to bypass local storage limits.
+3.  **Vercel Build Target:** Deploy easily using Vercel. All post-install hooks are fully configured to automate database client compiles out-of-the-box (`prisma generate && next build`). Read [DEPLOY.md](./DEPLOY.md) for full guide.
