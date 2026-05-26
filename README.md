@@ -2,6 +2,28 @@
 
 Pinverse is a high-performance, visually premium, and professionally engineered **Pinterest-inspired full-stack web application**. Designed with an absolute focus on modern UX/UI, fluid animation physics, secure token-based access sessions, and a highly scalable backend data architecture.
 
+<br/>
+
+<a href="https://project-d9l9f.vercel.app" target="_blank">
+  <img src="https://img.shields.io/badge/🚀_Live_Demo-Open_App-000000?style=for-the-badge&logo=vercel&logoColor=white" />
+</a>
+
+<br/>
+<br/>
+
+🔗 https://project-d9l9f.vercel.app
+
+<br/>
+<br/>
+
+<img src="https://img.shields.io/badge/React-Frontend-blue?style=flat-square&logo=react" />
+<img src="https://img.shields.io/badge/Prisma-ORM-black?style=flat-square&logo=prisma" />
+<img src="https://img.shields.io/badge/PostgreSQL-Database-blue?style=flat-square&logo=postgresql" />
+<img src="https://img.shields.io/badge/Vercel-Deployed-black?style=flat-square&logo=vercel" />
+
+</div>
+
+---
 Built using **Next.js 16 (App Router)**, **React 19**, **TypeScript 5**, **Tailwind CSS 4**, **shadcn/ui**, **Prisma ORM**, and **Framer Motion**.
 
 ---
