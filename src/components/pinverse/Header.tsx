@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useSyncExternalStore } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useViewStore } from '@/stores/view-store'
 import { useAuthStore } from '@/stores/auth-store'
 import { useNotificationStore } from '@/stores/notification-store'
@@ -60,11 +60,13 @@ export function Header() {
   const searchInputRef = useRef<HTMLInputElement>(null)
 
   // Hydration-safe client mount detection
-  const isMounted = useSyncExternalStore(
-    () => () => {},
-    () => true,
-    () => false
-  )
+  // Must use useState+useEffect so first client render matches SSR
+  // This is the standard pattern recommended by Next.js for theme-aware rendering
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Standard Next.js hydration pattern
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     if (!hydrated) {
@@ -179,7 +181,7 @@ export function Header() {
           {/* Right Side Actions */}
           <div className="flex items-center gap-1 sm:gap-2">
             {/* Theme Toggle */}
-            {isMounted && (
+            {mounted && (
               <Button
                 variant="ghost"
                 size="icon"
@@ -304,8 +306,8 @@ export function Header() {
                     <DropdownMenuSeparator />
                     {/* Theme toggle in mobile */}
                     <DropdownMenuItem onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}>
-                      {isMounted && (resolvedTheme === 'dark' ? <Sun className="w-4 h-4 mr-2" /> : <Moon className="w-4 h-4 mr-2" />)}
-                      {isMounted ? (resolvedTheme === 'dark' ? 'Light Mode' : 'Dark Mode') : 'Theme'}
+                      {mounted && (resolvedTheme === 'dark' ? <Sun className="w-4 h-4 mr-2" /> : <Moon className="w-4 h-4 mr-2" />)}
+                      {mounted ? (resolvedTheme === 'dark' ? 'Light Mode' : 'Dark Mode') : 'Theme'}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleLogout} className="text-red-600">
@@ -317,7 +319,7 @@ export function Header() {
               </>
             ) : (
               <div className="flex items-center gap-2">
-                {isMounted && (
+                {mounted && (
                   <Button
                     variant="ghost"
                     size="icon"

@@ -56,25 +56,15 @@ export const metadata: Metadata = {
       "A Pinterest-inspired platform to discover, save, and share creative visual content. Explore curated collections and connect with creators.",
     type: "website",
     siteName: "Pinverse",
-    images: [
-      {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: "Pinverse — Discover, Save & Share Creative Ideas",
-      },
-    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Pinverse — Discover, Save & Share Creative Ideas",
     description:
       "A Pinterest-inspired platform to discover, save, and share creative visual content.",
-    images: ["/og-image.png"],
   },
   icons: {
     icon: "/favicon.svg",
-    apple: "/icon-192.svg",
   },
   other: {
     "apple-mobile-web-app-capable": "yes",
