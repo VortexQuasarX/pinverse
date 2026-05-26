@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useSyncExternalStore } from 'react'
 import { useViewStore } from '@/stores/view-store'
 import { useAuthStore } from '@/stores/auth-store'
 import { useNotificationStore } from '@/stores/notification-store'
@@ -58,6 +58,13 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
+
+  // Hydration-safe client mount detection
+  const isMounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  )
 
   useEffect(() => {
     if (!hydrated) {
@@ -172,14 +179,14 @@ export function Header() {
           {/* Right Side Actions */}
           <div className="flex items-center gap-1 sm:gap-2">
             {/* Theme Toggle */}
-            {!!resolvedTheme && (
+            {isMounted && (
               <Button
                 variant="ghost"
                 size="icon"
                 className="rounded-full hidden sm:flex"
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
               >
-                {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                {resolvedTheme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
               </Button>
             )}
 
@@ -296,9 +303,9 @@ export function Header() {
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     {/* Theme toggle in mobile */}
-                    <DropdownMenuItem onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
-                      {theme === 'dark' ? <Sun className="w-4 h-4 mr-2" /> : <Moon className="w-4 h-4 mr-2" />}
-                      {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                    <DropdownMenuItem onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}>
+                      {isMounted && (resolvedTheme === 'dark' ? <Sun className="w-4 h-4 mr-2" /> : <Moon className="w-4 h-4 mr-2" />)}
+                      {isMounted ? (resolvedTheme === 'dark' ? 'Light Mode' : 'Dark Mode') : 'Theme'}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleLogout} className="text-red-600">
@@ -310,14 +317,14 @@ export function Header() {
               </>
             ) : (
               <div className="flex items-center gap-2">
-                {!!resolvedTheme && (
+                {isMounted && (
                   <Button
                     variant="ghost"
                     size="icon"
                     className="rounded-full"
-                    onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                    onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
                   >
-                    {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                    {resolvedTheme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
                   </Button>
                 )}
                 <Button
