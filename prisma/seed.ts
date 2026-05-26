@@ -89,7 +89,7 @@ async function main() {
   })
 
   // Create additional users
-  const users = []
+  const users: any[] = []
   for (let i = 1; i <= 5; i++) {
     const user = await prisma.user.upsert({
       where: { email: `creator${i}@pinverse.com` },
