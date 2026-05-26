@@ -37,6 +37,23 @@ export async function POST(
         data: { userId: session.id, pinId },
       })
       liked = true
+
+      // Create notification for pin author (if not self)
+      if (pin.authorId !== session.id) {
+        const liker = await db.user.findUnique({
+          where: { id: session.id },
+          select: { name: true },
+        })
+        await db.notification.create({
+          data: {
+            type: 'LIKE',
+            message: `${liker?.name || 'Someone'} liked your pin "${pin.title}"`,
+            fromUserId: session.id,
+            toUserId: pin.authorId,
+            pinId,
+          },
+        }).catch((err) => console.error('Error creating like notification:', err))
+      }
     }
 
     const likesCount = await db.like.count({ where: { pinId } })

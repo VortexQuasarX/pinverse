@@ -89,6 +89,23 @@ export async function POST(
       },
     })
 
+    // Create notification for pin author (if not self)
+    if (pin.authorId !== session.id) {
+      const commenter = await db.user.findUnique({
+        where: { id: session.id },
+        select: { name: true },
+      })
+      await db.notification.create({
+        data: {
+          type: 'COMMENT',
+          message: `${commenter?.name || 'Someone'} commented on your pin "${pin.title}"`,
+          fromUserId: session.id,
+          toUserId: pin.authorId,
+          pinId,
+        },
+      }).catch((err) => console.error('Error creating comment notification:', err))
+    }
+
     return NextResponse.json(comment, { status: 201 })
   } catch (error) {
     console.error('Error creating comment:', error)

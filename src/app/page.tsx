@@ -11,9 +11,11 @@ import { LoginView, RegisterView } from '@/components/pinverse/AuthViews'
 import { PinDetailView } from '@/components/pinverse/PinDetailView'
 import { CreatePinView } from '@/components/pinverse/CreatePinView'
 import { ProfileView } from '@/components/pinverse/ProfileView'
+import { BoardsView } from '@/components/pinverse/BoardsView'
+import { BoardDetailView } from '@/components/pinverse/BoardDetailView'
 
 export default function Home() {
-  const { currentView } = useViewStore()
+  const { currentView, selectedPinId } = useViewStore()
   const { checkSession, hydrated } = useAuthStore()
   const { fetchPins } = usePinStore()
 
@@ -34,11 +36,15 @@ export default function Home() {
       case 'register':
         return <RegisterView />
       case 'pin-detail':
-        return <PinDetailView />
+        return <PinDetailView key={selectedPinId} />
       case 'create-pin':
         return <CreatePinView />
       case 'profile':
         return <ProfileView />
+      case 'boards':
+        return <BoardsView />
+      case 'board-detail':
+        return <BoardDetailView />
       case 'home':
       case 'search':
       default:

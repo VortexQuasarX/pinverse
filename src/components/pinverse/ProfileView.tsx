@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Calendar, Pencil, X, Loader2, Camera } from 'lucide-react'
+import { ArrowLeft, Calendar, Pencil, X, Loader2, Camera, LayoutGrid } from 'lucide-react'
 import { useViewStore } from '@/stores/view-store'
 import { useAuthStore } from '@/stores/auth-store'
 import { usePinStore, type PinData } from '@/stores/pin-store'
@@ -32,12 +32,22 @@ interface UserProfile {
   isFollowing?: boolean
 }
 
+interface BoardData {
+  id: string
+  name: string
+  description: string | null
+  coverImage: string | null
+  isPrivate: boolean
+  _count: { pins: number }
+}
+
 export function ProfileView() {
-  const { selectedUserId, goHome } = useViewStore()
+  const { selectedUserId, goHome, selectBoard } = useViewStore()
   const { user: currentUser, updateProfile } = useAuthStore()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [userPins, setUserPins] = useState<PinData[]>([])
   const [savedPins, setSavedPins] = useState<PinData[]>([])
+  const [userBoards, setUserBoards] = useState<BoardData[]>([])
   const [loading, setLoading] = useState(true)
   const [isFollowing, setIsFollowing] = useState(false)
   const [followLoading, setFollowLoading] = useState(false)
@@ -49,6 +59,13 @@ export function ProfileView() {
   const [editAvatar, setEditAvatar] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
+
+  // Infinite scroll for pins
+  const [pinsPage, setPinsPage] = useState(1)
+  const [pinsHasMore, setPinsHasMore] = useState(true)
+  const [pinsLoading, setPinsLoading] = useState(false)
+  const pinsObserverRef = useRef<IntersectionObserver | null>(null)
+  const pinsLoadMoreRef = useRef<HTMLDivElement | null>(null)
 
   const isOwnProfile = currentUser?.id === selectedUserId
 
@@ -71,15 +88,24 @@ export function ProfileView() {
     }
 
     const fetchUserPins = async () => {
+      setPinsLoading(true)
       try {
-        const res = await fetch(`/api/users/${selectedUserId}/pins?limit=50`)
+        const res = await fetch(`/api/users/${selectedUserId}/pins?page=1&limit=20`)
         if (res.ok) {
           const data = await res.json()
-          setUserPins(data.pins || [])
+          const mapped = (data.pins || []).map((pin: Record<string, unknown>) => ({
+            ...pin,
+            isLiked: pin.liked ?? false,
+            isSaved: pin.saved ?? false,
+          }))
+          setUserPins(mapped)
+          setPinsPage(1)
+          setPinsHasMore(mapped.length >= 20)
         }
       } catch {
         // silently fail
       }
+      setPinsLoading(false)
     }
 
     const fetchSavedPins = async () => {
@@ -88,7 +114,24 @@ export function ProfileView() {
         const res = await fetch(`/api/users/${selectedUserId}/saved?limit=50`)
         if (res.ok) {
           const data = await res.json()
-          setSavedPins(data.pins || [])
+          const mapped = (data.pins || []).map((pin: Record<string, unknown>) => ({
+            ...pin,
+            isLiked: pin.liked ?? false,
+            isSaved: pin.saved ?? false,
+          }))
+          setSavedPins(mapped)
+        }
+      } catch {
+        // silently fail
+      }
+    }
+
+    const fetchUserBoards = async () => {
+      try {
+        const res = await fetch(`/api/users/${selectedUserId}/boards`)
+        if (res.ok) {
+          const data = await res.json()
+          setUserBoards(data.boards || [])
         }
       } catch {
         // silently fail
@@ -98,7 +141,41 @@ export function ProfileView() {
     fetchProfile()
     fetchUserPins()
     fetchSavedPins()
+    fetchUserBoards()
   }, [selectedUserId, isOwnProfile])
+
+  // Infinite scroll for user pins
+  const handlePinsObserver = useCallback(
+    (entries: IntersectionObserverEntry[]) => {
+      const [entry] = entries
+      if (entry.isIntersecting && !pinsLoading && pinsHasMore) {
+        const nextPage = pinsPage + 1
+        setPinsLoading(true)
+        fetch(`/api/users/${selectedUserId}/pins?page=${nextPage}&limit=20`)
+          .then((res) => res.json())
+          .then((data) => {
+            const mapped = (data.pins || []).map((pin: Record<string, unknown>) => ({
+              ...pin,
+              isLiked: pin.liked ?? false,
+              isSaved: pin.saved ?? false,
+            }))
+            setUserPins((prev) => [...prev, ...mapped])
+            setPinsPage(nextPage)
+            setPinsHasMore(mapped.length >= 20)
+            setPinsLoading(false)
+          })
+          .catch(() => setPinsLoading(false))
+      }
+    },
+    [pinsLoading, pinsHasMore, pinsPage, selectedUserId]
+  )
+
+  useEffect(() => {
+    if (pinsObserverRef.current) pinsObserverRef.current.disconnect()
+    pinsObserverRef.current = new IntersectionObserver(handlePinsObserver, { rootMargin: '200px' })
+    if (pinsLoadMoreRef.current) pinsObserverRef.current.observe(pinsLoadMoreRef.current)
+    return () => { if (pinsObserverRef.current) pinsObserverRef.current.disconnect() }
+  }, [handlePinsObserver])
 
   const handleFollowToggle = async () => {
     if (!currentUser || !selectedUserId) return
@@ -340,7 +417,7 @@ export function ProfileView() {
           )}
         </div>
 
-        {/* Pins Tabs */}
+        {/* Pins / Saved / Boards Tabs */}
         <Tabs defaultValue="pins" className="w-full">
           <TabsList className="w-full justify-center mb-6 bg-transparent">
             <TabsTrigger value="pins" className="rounded-full data-[state=active]:bg-foreground data-[state=active]:text-background">
@@ -351,6 +428,9 @@ export function ProfileView() {
                 Saved
               </TabsTrigger>
             )}
+            <TabsTrigger value="boards" className="rounded-full data-[state=active]:bg-foreground data-[state=active]:text-background">
+              Boards
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="pins">
@@ -361,11 +441,16 @@ export function ProfileView() {
                 </p>
               </div>
             ) : (
-              <div className="columns-2 sm:columns-3 md:columns-4 gap-4">
-                {userPins.map((pin, i) => (
-                  <PinCard key={pin.id} pin={pin} index={i} />
-                ))}
-              </div>
+              <>
+                <div className="columns-2 sm:columns-3 md:columns-4 gap-4">
+                  {userPins.map((pin, i) => (
+                    <PinCard key={pin.id} pin={pin} index={i} />
+                  ))}
+                </div>
+                <div ref={pinsLoadMoreRef} className="flex justify-center py-4">
+                  {pinsLoading && <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />}
+                </div>
+              </>
             )}
           </TabsContent>
 
@@ -384,6 +469,47 @@ export function ProfileView() {
               )}
             </TabsContent>
           )}
+
+          <TabsContent value="boards">
+            {userBoards.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">
+                  {isOwnProfile ? "You haven't created any boards yet" : "No boards yet"}
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                {userBoards.map((board, i) => (
+                  <motion.div
+                    key={board.id}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: i * 0.05 }}
+                  >
+                    <button
+                      onClick={() => selectBoard(board.id)}
+                      className="w-full text-left"
+                    >
+                      <div className="aspect-square rounded-2xl bg-muted overflow-hidden relative group hover:shadow-lg transition-shadow">
+                        {board.coverImage ? (
+                          <img src={board.coverImage} alt={board.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <LayoutGrid className="w-12 h-12 text-muted-foreground/30" />
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                      </div>
+                      <div className="pt-2 px-1">
+                        <h3 className="font-semibold text-sm truncate">{board.name}</h3>
+                        <p className="text-xs text-muted-foreground">{board._count.pins} pins</p>
+                      </div>
+                    </button>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </TabsContent>
         </Tabs>
       </motion.div>
     </div>

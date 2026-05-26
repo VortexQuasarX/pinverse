@@ -20,8 +20,17 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "i.pravatar.cc",
       },
+      {
+        protocol: "https",
+        hostname: "**",
+      },
     ],
+    formats: ["image/avif", "image/webp"],
+    minimumCacheTTL: 60,
   },
+  allowedDevOrigins: [
+    ".space-z.ai",
+  ],
 };
 
 export default nextConfig;

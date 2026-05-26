@@ -3,7 +3,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { useViewStore } from '@/stores/view-store'
 import { useAuthStore } from '@/stores/auth-store'
+import { useNotificationStore } from '@/stores/notification-store'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useTheme } from 'next-themes'
 import {
   Search,
   Home,
@@ -12,9 +14,12 @@ import {
   LogOut,
   Menu,
   X,
-  ChevronDown,
   Heart,
   Bookmark,
+  Bell,
+  Sun,
+  Moon,
+  LayoutGrid,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -26,6 +31,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Separator } from '@/components/ui/separator'
+import { formatDistanceToNow } from 'date-fns'
 
 const categories = [
   'All',
@@ -43,8 +52,11 @@ const categories = [
 export function Header() {
   const { currentView, setView, setSearchQuery, setSelectedCategory, selectUser, goHome, searchQuery, selectedCategory } = useViewStore()
   const { user, logout, checkSession, hydrated } = useAuthStore()
+  const { notifications, unreadCount, fetchNotifications, markAllRead, markOneRead, connectSocket, disconnectSocket } = useNotificationStore()
+  const { theme, setTheme, resolvedTheme } = useTheme()
   const [searchInput, setSearchInput] = useState('')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [notifOpen, setNotifOpen] = useState(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -52,6 +64,18 @@ export function Header() {
       checkSession()
     }
   }, [hydrated, checkSession])
+
+  useEffect(() => {
+    if (user) {
+      fetchNotifications()
+      connectSocket(user.id)
+    } else {
+      disconnectSocket()
+    }
+    return () => {
+      disconnectSocket()
+    }
+  }, [user, fetchNotifications, connectSocket, disconnectSocket])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -70,6 +94,15 @@ export function Header() {
   const handleLogout = async () => {
     await logout()
     goHome()
+  }
+
+  const getNotifIcon = (type: string) => {
+    switch (type) {
+      case 'like': return <Heart className="w-4 h-4 text-red-500" />
+      case 'comment': return <Bookmark className="w-4 h-4 text-blue-500" />
+      case 'follow': return <User className="w-4 h-4 text-green-500" />
+      default: return <Bell className="w-4 h-4" />
+    }
   }
 
   return (
@@ -104,15 +137,26 @@ export function Header() {
               Home
             </Button>
             {user && (
-              <Button
-                variant={currentView === 'create-pin' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setView('create-pin')}
-                className="rounded-full"
-              >
-                <Plus className="w-4 h-4 mr-1" />
-                Create
-              </Button>
+              <>
+                <Button
+                  variant={currentView === 'create-pin' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setView('create-pin')}
+                  className="rounded-full"
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Create
+                </Button>
+                <Button
+                  variant={currentView === 'boards' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setView('boards')}
+                  className="rounded-full"
+                >
+                  <LayoutGrid className="w-4 h-4 mr-1" />
+                  Boards
+                </Button>
+              </>
             )}
           </nav>
 
@@ -132,12 +176,95 @@ export function Header() {
 
           {/* Right Side Actions */}
           <div className="flex items-center gap-1 sm:gap-2">
+            {/* Theme Toggle */}
+            {!!resolvedTheme && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-full hidden sm:flex"
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              >
+                {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              </Button>
+            )}
+
             {user ? (
               <>
-                {/* Notifications placeholder */}
-                <Button variant="ghost" size="icon" className="rounded-full hidden sm:flex">
-                  <Heart className="w-5 h-5" />
-                </Button>
+                {/* Notifications */}
+                <DropdownMenu open={notifOpen} onOpenChange={setNotifOpen}>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="rounded-full relative">
+                      <Bell className="w-5 h-5" />
+                      {unreadCount > 0 && (
+                        <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-500 text-white text-[10px] border-2 border-background">
+                          {unreadCount > 99 ? '99+' : unreadCount}
+                        </Badge>
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-80">
+                    <div className="flex items-center justify-between px-3 py-2">
+                      <h3 className="font-semibold text-sm">Notifications</h3>
+                      {unreadCount > 0 && (
+                        <button
+                          onClick={() => markAllRead()}
+                          className="text-xs text-red-500 hover:text-red-600 font-medium"
+                        >
+                          Mark all read
+                        </button>
+                      )}
+                    </div>
+                    <DropdownMenuSeparator />
+                    <ScrollArea className="max-h-80">
+                      {notifications.length === 0 ? (
+                        <div className="p-4 text-center text-sm text-muted-foreground">
+                          No notifications yet
+                        </div>
+                      ) : (
+                        notifications.slice(0, 20).map((notif) => (
+                          <DropdownMenuItem
+                            key={notif.id}
+                            className="flex items-start gap-3 p-3 cursor-pointer"
+                            onClick={() => {
+                              markOneRead(notif.id)
+                              if (notif.pinId) {
+                                useViewStore.getState().selectPin(notif.pinId)
+                              }
+                              setNotifOpen(false)
+                            }}
+                          >
+                            <div className="mt-0.5 shrink-0">
+                              {notif.fromUser ? (
+                                <Avatar className="w-8 h-8">
+                                  <AvatarImage src={notif.fromUser.avatar || undefined} />
+                                  <AvatarFallback className="text-[10px] bg-red-100 text-red-600">
+                                    {notif.fromUser.name?.charAt(0).toUpperCase()}
+                                  </AvatarFallback>
+                                </Avatar>
+                              ) : (
+                                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                                  {getNotifIcon(notif.type)}
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-sm ${!notif.read ? 'font-medium' : ''}`}>
+                                {notif.message}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground mt-0.5">
+                                {formatDistanceToNow(new Date(notif.createdAt), { addSuffix: true })}
+                              </p>
+                            </div>
+                            {!notif.read && (
+                              <div className="w-2 h-2 rounded-full bg-red-500 shrink-0 mt-2" />
+                            )}
+                          </DropdownMenuItem>
+                        ))
+                      )}
+                    </ScrollArea>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
                 <Button variant="ghost" size="icon" className="rounded-full hidden sm:flex" onClick={() => setView('create-pin')}>
                   <Plus className="w-5 h-5" />
                 </Button>
@@ -164,9 +291,19 @@ export function Header() {
                       <User className="w-4 h-4 mr-2" />
                       Profile
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setView('boards')}>
+                      <LayoutGrid className="w-4 h-4 mr-2" />
+                      My Boards
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setView('create-pin')}>
                       <Plus className="w-4 h-4 mr-2" />
                       Create Pin
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    {/* Theme toggle in mobile */}
+                    <DropdownMenuItem onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
+                      {theme === 'dark' ? <Sun className="w-4 h-4 mr-2" /> : <Moon className="w-4 h-4 mr-2" />}
+                      {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleLogout} className="text-red-600">
@@ -178,6 +315,16 @@ export function Header() {
               </>
             ) : (
               <div className="flex items-center gap-2">
+                {!!resolvedTheme && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-full"
+                    onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                  >
+                    {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="sm"
@@ -247,14 +394,24 @@ export function Header() {
                   Home
                 </Button>
                 {user && (
-                  <Button
-                    variant={currentView === 'create-pin' ? 'secondary' : 'ghost'}
-                    className="w-full justify-start"
-                    onClick={() => { setView('create-pin'); setMobileMenuOpen(false) }}
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Create Pin
-                  </Button>
+                  <>
+                    <Button
+                      variant={currentView === 'create-pin' ? 'secondary' : 'ghost'}
+                      className="w-full justify-start"
+                      onClick={() => { setView('create-pin'); setMobileMenuOpen(false) }}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create Pin
+                    </Button>
+                    <Button
+                      variant={currentView === 'boards' ? 'secondary' : 'ghost'}
+                      className="w-full justify-start"
+                      onClick={() => { setView('boards'); setMobileMenuOpen(false) }}
+                    >
+                      <LayoutGrid className="w-4 h-4 mr-2" />
+                      My Boards
+                    </Button>
+                  </>
                 )}
               </div>
             </motion.div>

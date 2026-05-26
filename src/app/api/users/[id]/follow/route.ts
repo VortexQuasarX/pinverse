@@ -44,6 +44,8 @@ export async function POST(
       },
     })
 
+    let following: boolean
+
     if (existingFollow) {
       // Unfollow
       await db.follow.delete({
@@ -54,6 +56,7 @@ export async function POST(
           },
         },
       })
+      following = false
     } else {
       // Follow
       await db.follow.create({
@@ -62,6 +65,21 @@ export async function POST(
           followingId: id,
         },
       })
+      following = true
+
+      // Create notification for the followed user
+      const follower = await db.user.findUnique({
+        where: { id: session.id },
+        select: { name: true },
+      })
+      await db.notification.create({
+        data: {
+          type: 'FOLLOW',
+          message: `${follower?.name || 'Someone'} started following you`,
+          fromUserId: session.id,
+          toUserId: id,
+        },
+      }).catch((err) => console.error('Error creating follow notification:', err))
     }
 
     // Get updated followers count
@@ -70,7 +88,7 @@ export async function POST(
     })
 
     return NextResponse.json({
-      following: !existingFollow,
+      following,
       followersCount,
     })
   } catch (error) {
