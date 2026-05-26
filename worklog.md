@@ -100,3 +100,27 @@ Stage Summary:
 - .env.example has all variables with descriptions and examples
 - DEPLOY.md has complete 7-step deployment guide
 - Updated .env with all new variables (empty for S3, local for storage)
+
+---
+Task ID: 7
+Agent: Main Agent
+Task: Make workspace locally runnable and create README
+
+Work Log:
+- Explored full project state and verified all files
+- Confirmed Header.tsx hydration fix is already in place (mounted state pattern)
+- Verified proxy.ts works correctly with Next.js 16 (confirmed in dev logs)
+- Fixed DATABASE_URL from absolute path to relative path (file:../db/custom.db) for portability
+- Updated .env.example with corrected relative path
+- Created comprehensive README.md with quick start, project structure, tech stack, scripts, demo accounts, and deployment guide
+- Removed duplicate root seed.ts and empty download/ folder
+- Verified all API endpoints work correctly (pins, auth/login, boards)
+- Verified lint passes with no errors
+- Tested dev server starts and runs correctly
+
+Stage Summary:
+- Project is fully runnable locally with bun install && bun run db:push && bun run db:seed && bun run dev
+- README.md created with complete documentation
+- .env.example created with all variable documentation
+- DATABASE_URL fixed to relative path for portability across machines
+- All API endpoints tested and working
