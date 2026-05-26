@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, memo } from 'react'
+import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { Heart, Bookmark, MessageCircle, MoreHorizontal, Trash2 } from 'lucide-react'
 import { usePinStore, type PinData } from '@/stores/pin-store'
@@ -21,7 +22,7 @@ interface PinCardProps {
   index?: number
 }
 
-export function PinCard({ pin, index = 0 }: PinCardProps) {
+export const PinCard = memo(function PinCard({ pin, index = 0 }: PinCardProps) {
   const { toggleLike, toggleSave, deletePin } = usePinStore()
   const { user } = useAuthStore()
   const { selectPin, selectUser } = useViewStore()
@@ -70,14 +71,18 @@ export function PinCard({ pin, index = 0 }: PinCardProps) {
       >
         {/* Image */}
         {!imageError ? (
-          <img
+          <Image
             src={pin.imageUrl}
             alt={pin.title}
+            width={400}
+            height={300}
             className={`w-full object-cover transition-opacity duration-300 ${
               imageLoaded ? 'opacity-100' : 'opacity-0'
-            }`}
+            }`
+            }
             style={{ minHeight: '200px' }}
             loading="lazy"
+            unoptimized={pin.imageUrl.startsWith('http')}
             onLoad={() => setImageLoaded(true)}
             onError={() => setImageError(true)}
           />
@@ -194,4 +199,4 @@ export function PinCard({ pin, index = 0 }: PinCardProps) {
       </div>
     </motion.div>
   )
-}
+})

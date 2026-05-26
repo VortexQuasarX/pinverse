@@ -10,18 +10,31 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') || undefined
     const category = searchParams.get('category') || undefined
 
-    const where: Record<string, unknown> = {}
+    const conditions: Record<string, unknown>[] = []
 
     if (search) {
-      where.OR = [
-        { title: { contains: search } },
-        { description: { contains: search } },
-      ]
+      const capitalized = search.charAt(0).toUpperCase() + search.slice(1)
+      conditions.push({
+        OR: [
+          { title: { contains: search } },
+          { description: { contains: search } },
+          { title: { contains: capitalized } },
+          { description: { contains: capitalized } },
+        ],
+      })
     }
 
     if (category) {
-      where.category = category
+      const capitalized = category.charAt(0).toUpperCase() + category.slice(1)
+      conditions.push({
+        OR: [
+          { category: { equals: category } },
+          { category: { equals: capitalized } },
+        ],
+      })
     }
+
+    const where = conditions.length > 0 ? { AND: conditions } : {}
 
     const [pins, total] = await Promise.all([
       db.pin.findMany({

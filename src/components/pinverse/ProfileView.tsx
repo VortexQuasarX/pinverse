@@ -2,16 +2,20 @@
 
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowLeft, MapPin, Calendar, Link as LinkIcon } from 'lucide-react'
+import { ArrowLeft, Calendar, Pencil, X, Loader2, Camera } from 'lucide-react'
 import { useViewStore } from '@/stores/view-store'
-import { useAuthStore, type AuthUser } from '@/stores/auth-store'
+import { useAuthStore } from '@/stores/auth-store'
 import { usePinStore, type PinData } from '@/stores/pin-store'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PinCard } from './PinCard'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatDistanceToNow } from 'date-fns'
+import { toast } from '@/hooks/use-toast'
 
 interface UserProfile {
   id: string
@@ -30,13 +34,21 @@ interface UserProfile {
 
 export function ProfileView() {
   const { selectedUserId, goHome } = useViewStore()
-  const { user: currentUser } = useAuthStore()
+  const { user: currentUser, updateProfile } = useAuthStore()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [userPins, setUserPins] = useState<PinData[]>([])
   const [savedPins, setSavedPins] = useState<PinData[]>([])
   const [loading, setLoading] = useState(true)
   const [isFollowing, setIsFollowing] = useState(false)
   const [followLoading, setFollowLoading] = useState(false)
+
+  // Edit mode state
+  const [isEditing, setIsEditing] = useState(false)
+  const [editName, setEditName] = useState('')
+  const [editBio, setEditBio] = useState('')
+  const [editAvatar, setEditAvatar] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
 
   const isOwnProfile = currentUser?.id === selectedUserId
 
@@ -112,6 +124,65 @@ export function ProfileView() {
     setFollowLoading(false)
   }
 
+  const startEditing = () => {
+    if (!profile) return
+    setEditName(profile.name)
+    setEditBio(profile.bio || '')
+    setEditAvatar(profile.avatar)
+    setIsEditing(true)
+  }
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingAvatar(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await fetch('/api/upload', { method: 'POST', body: formData })
+      if (res.ok) {
+        const data = await res.json()
+        setEditAvatar(data.url)
+      } else {
+        toast({ title: 'Failed to upload avatar', variant: 'destructive' })
+      }
+    } catch {
+      toast({ title: 'Failed to upload avatar', variant: 'destructive' })
+    }
+    setUploadingAvatar(false)
+  }
+
+  const handleSaveProfile = async () => {
+    if (!editName.trim()) {
+      toast({ title: 'Name cannot be empty', variant: 'destructive' })
+      return
+    }
+    setSaving(true)
+    try {
+      const updateData: Record<string, string> = { name: editName.trim() }
+      if (editBio.trim()) updateData.bio = editBio.trim()
+      if (editAvatar) updateData.avatar = editAvatar
+
+      const res = await fetch('/api/users/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateData),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        await updateProfile(data.user)
+        setProfile(prev => prev ? { ...prev, name: data.user.name, bio: data.user.bio, avatar: data.user.avatar } : null)
+        setIsEditing(false)
+        toast({ title: 'Profile updated!' })
+      } else {
+        toast({ title: 'Failed to update profile', variant: 'destructive' })
+      }
+    } catch {
+      toast({ title: 'Failed to update profile', variant: 'destructive' })
+    }
+    setSaving(false)
+  }
+
   if (loading) {
     return <ProfileSkeleton />
   }
@@ -123,6 +194,10 @@ export function ProfileView() {
       </div>
     )
   }
+
+  const displayAvatar = isEditing ? editAvatar : profile.avatar
+  const displayName = isEditing ? editName : profile.name
+  const displayBio = isEditing ? editBio : profile.bio
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6">
@@ -137,58 +212,132 @@ export function ProfileView() {
       >
         {/* Profile Header */}
         <div className="text-center mb-8">
-          <Avatar className="w-24 h-24 mx-auto mb-4">
-            <AvatarImage src={profile.avatar || undefined} />
-            <AvatarFallback className="text-2xl bg-red-100 text-red-600 font-bold">
-              {profile.name?.charAt(0).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
+          <div className="relative inline-block">
+            <Avatar className="w-24 h-24 mx-auto mb-4">
+              <AvatarImage src={displayAvatar || undefined} />
+              <AvatarFallback className="text-2xl bg-red-100 text-red-600 font-bold">
+                {displayName?.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            {isEditing && (
+              <label className="absolute bottom-4 right-0 cursor-pointer">
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarUpload}
+                  disabled={uploadingAvatar}
+                />
+                <div className="w-8 h-8 rounded-full bg-foreground text-background flex items-center justify-center hover:opacity-80 transition-opacity">
+                  {uploadingAvatar ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
+                </div>
+              </label>
+            )}
+          </div>
 
-          <h1 className="text-2xl font-bold">{profile.name}</h1>
-          <p className="text-muted-foreground text-sm">{profile.email}</p>
+          {isEditing ? (
+            <div className="max-w-sm mx-auto space-y-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-name" className="text-xs">Name</Label>
+                <Input
+                  id="edit-name"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="rounded-lg text-center"
+                  placeholder="Your name"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-bio" className="text-xs">Bio</Label>
+                <Textarea
+                  id="edit-bio"
+                  value={editBio}
+                  onChange={(e) => setEditBio(e.target.value)}
+                  className="rounded-lg resize-none min-h-[80px]"
+                  placeholder="Tell us about yourself"
+                />
+              </div>
+              <div className="flex gap-2 justify-center pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full"
+                  onClick={() => setIsEditing(false)}
+                  disabled={saving}
+                >
+                  <X className="w-4 h-4 mr-1" />
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  className="rounded-full bg-red-500 hover:bg-red-600"
+                  onClick={handleSaveProfile}
+                  disabled={saving}
+                >
+                  {saving ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
+                  Save
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <h1 className="text-2xl font-bold">{profile.name}</h1>
+              <p className="text-muted-foreground text-sm">{profile.email}</p>
 
-          {profile.bio && (
-            <p className="mt-2 text-sm max-w-md mx-auto">{profile.bio}</p>
+              {profile.bio && (
+                <p className="mt-2 text-sm max-w-md mx-auto">{profile.bio}</p>
+              )}
+
+              {/* Stats */}
+              <div className="flex items-center justify-center gap-6 mt-4">
+                <div className="text-center">
+                  <p className="font-bold text-lg">{profile._count.pins}</p>
+                  <p className="text-xs text-muted-foreground">Pins</p>
+                </div>
+                <div className="text-center">
+                  <p className="font-bold text-lg">{profile._count.followers}</p>
+                  <p className="text-xs text-muted-foreground">Followers</p>
+                </div>
+                <div className="text-center">
+                  <p className="font-bold text-lg">{profile._count.following}</p>
+                  <p className="text-xs text-muted-foreground">Following</p>
+                </div>
+              </div>
+
+              {/* Follow / Edit Button */}
+              <div className="mt-4 flex items-center justify-center gap-3">
+                {!isOwnProfile && currentUser && (
+                  <Button
+                    onClick={handleFollowToggle}
+                    className={`rounded-full font-semibold ${
+                      isFollowing
+                        ? 'bg-muted text-foreground hover:bg-muted/80'
+                        : 'bg-red-500 hover:bg-red-600 text-white'
+                    }`}
+                    disabled={followLoading}
+                  >
+                    {isFollowing ? 'Unfollow' : 'Follow'}
+                  </Button>
+                )}
+                {isOwnProfile && (
+                  <>
+                    <Button
+                      variant="outline"
+                      className="rounded-full"
+                      onClick={startEditing}
+                    >
+                      <Pencil className="w-4 h-4 mr-1" />
+                      Edit Profile
+                    </Button>
+                    <p className="text-xs text-muted-foreground">
+                      <Calendar className="w-3 h-3 inline mr-1" />
+                      Joined {formatDistanceToNow(new Date(profile.createdAt), { addSuffix: true })}
+                    </p>
+                  </>
+                )}
+              </div>
+            </>
           )}
-
-          {/* Stats */}
-          <div className="flex items-center justify-center gap-6 mt-4">
-            <div className="text-center">
-              <p className="font-bold text-lg">{profile._count.pins}</p>
-              <p className="text-xs text-muted-foreground">Pins</p>
-            </div>
-            <div className="text-center">
-              <p className="font-bold text-lg">{profile._count.followers}</p>
-              <p className="text-xs text-muted-foreground">Followers</p>
-            </div>
-            <div className="text-center">
-              <p className="font-bold text-lg">{profile._count.following}</p>
-              <p className="text-xs text-muted-foreground">Following</p>
-            </div>
-          </div>
-
-          {/* Follow / Edit Button */}
-          <div className="mt-4">
-            {!isOwnProfile && currentUser && (
-              <Button
-                onClick={handleFollowToggle}
-                className={`rounded-full font-semibold ${
-                  isFollowing
-                    ? 'bg-muted text-foreground hover:bg-muted/80'
-                    : 'bg-red-500 hover:bg-red-600 text-white'
-                }`}
-                disabled={followLoading}
-              >
-                {isFollowing ? 'Unfollow' : 'Follow'}
-              </Button>
-            )}
-            {isOwnProfile && (
-              <p className="text-xs text-muted-foreground">
-                <Calendar className="w-3 h-3 inline mr-1" />
-                Joined {formatDistanceToNow(new Date(profile.createdAt), { addSuffix: true })}
-              </p>
-            )}
-          </div>
         </div>
 
         {/* Pins Tabs */}

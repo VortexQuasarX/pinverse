@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
+import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { Heart, Bookmark, MessageCircle, Send, ArrowLeft, MoreHorizontal, Trash2, Link2 } from 'lucide-react'
 import { usePinStore, type PinComment } from '@/stores/pin-store'
@@ -107,10 +108,14 @@ export function PinDetailView() {
         <div className="grid md:grid-cols-2 gap-0">
           {/* Image */}
           <div className="relative bg-muted">
-            <img
+            <Image
               src={currentPin.imageUrl}
               alt={currentPin.title}
+              width={800}
+              height={600}
               className="w-full h-auto max-h-[80vh] object-contain"
+              unoptimized={currentPin.imageUrl.startsWith('http')}
+              priority
             />
           </div>
 

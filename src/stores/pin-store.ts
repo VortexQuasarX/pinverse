@@ -46,6 +46,8 @@ interface PinState {
   total: number
   currentPin: PinData | null
   currentPinLoading: boolean
+  currentSearch: string
+  currentCategory: string
 }
 
 interface PinActions {
@@ -71,9 +73,11 @@ export const usePinStore = create<PinState & PinActions>((set, get) => ({
   total: 0,
   currentPin: null,
   currentPinLoading: false,
+  currentSearch: '',
+  currentCategory: '',
 
   fetchPins: async (search, category, reset = true) => {
-    set(reset ? { loading: true, pins: [] } : { loading: true })
+    set(reset ? { loading: true, pins: [], currentSearch: search || '', currentCategory: category || '' } : { loading: true })
     try {
       const params = new URLSearchParams()
       params.set('page', '1')
@@ -101,18 +105,25 @@ export const usePinStore = create<PinState & PinActions>((set, get) => ({
   },
 
   fetchMorePins: async () => {
-    const { page, totalPages, pins } = get()
+    const { page, totalPages, pins, currentSearch, currentCategory } = get()
     if (page >= totalPages) return
     set({ loadingMore: true })
     try {
       const params = new URLSearchParams()
       params.set('page', String(page + 1))
       params.set('limit', '20')
+      if (currentSearch) params.set('search', currentSearch)
+      if (currentCategory) params.set('category', currentCategory)
 
       const res = await fetch(`/api/pins?${params}`)
       const data = await res.json()
+      const mappedPins = (data.pins || []).map((pin: Record<string, unknown>) => ({
+        ...pin,
+        isLiked: pin.liked ?? false,
+        isSaved: pin.saved ?? false,
+      }))
       set({
-        pins: [...pins, ...(data.pins || [])],
+        pins: [...pins, ...mappedPins],
         page: data.page || page + 1,
         totalPages: data.totalPages || totalPages,
         total: data.total || 0,
@@ -277,5 +288,5 @@ export const usePinStore = create<PinState & PinActions>((set, get) => ({
     }
   },
 
-  resetPins: () => set({ pins: [], page: 1, totalPages: 1, total: 0, loading: false }),
+  resetPins: () => set({ pins: [], page: 1, totalPages: 1, total: 0, loading: false, currentSearch: '', currentCategory: '' }),
 }))
