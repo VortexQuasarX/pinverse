@@ -29,7 +29,6 @@ const nextConfig: NextConfig = {
     minimumCacheTTL: 60,
   },
   allowedDevOrigins: [
-    ".space-z.ai",
     "preview-chat-8c4462e1-af32-4851-8cab-a72510cf893a.space-z.ai",
   ],
 };

@@ -52,7 +52,7 @@ const categories = [
 export function Header() {
   const { currentView, setView, setSearchQuery, setSelectedCategory, selectUser, goHome, searchQuery, selectedCategory } = useViewStore()
   const { user, logout, checkSession, hydrated } = useAuthStore()
-  const { notifications, unreadCount, fetchNotifications, markAllRead, markOneRead, connectSocket, disconnectSocket } = useNotificationStore()
+  const { notifications, unreadCount, fetchNotifications, markAllRead, markOneRead } = useNotificationStore()
   const { theme, setTheme, resolvedTheme } = useTheme()
   const [searchInput, setSearchInput] = useState('')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -68,14 +68,8 @@ export function Header() {
   useEffect(() => {
     if (user) {
       fetchNotifications()
-      connectSocket(user.id)
-    } else {
-      disconnectSocket()
     }
-    return () => {
-      disconnectSocket()
-    }
-  }, [user, fetchNotifications, connectSocket, disconnectSocket])
+  }, [user, fetchNotifications])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()

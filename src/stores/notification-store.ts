@@ -1,5 +1,4 @@
 import { create } from 'zustand'
-import { io, Socket } from 'socket.io-client'
 
 export interface NotificationData {
   id: string
@@ -21,16 +20,12 @@ interface NotificationState {
   notifications: NotificationData[]
   unreadCount: number
   loading: boolean
-  socket: Socket | null
-  connected: boolean
 }
 
 interface NotificationActions {
   fetchNotifications: () => Promise<void>
   markAllRead: () => Promise<void>
   markOneRead: (id: string) => Promise<void>
-  connectSocket: (userId: string) => void
-  disconnectSocket: () => void
   addNotification: (notification: NotificationData) => void
 }
 
@@ -38,8 +33,6 @@ export const useNotificationStore = create<NotificationState & NotificationActio
   notifications: [],
   unreadCount: 0,
   loading: false,
-  socket: null,
-  connected: false,
 
   fetchNotifications: async () => {
     set({ loading: true })
@@ -83,39 +76,6 @@ export const useNotificationStore = create<NotificationState & NotificationActio
       }))
     } catch {
       // silently fail
-    }
-  },
-
-  connectSocket: (userId) => {
-    const existing = get().socket
-    if (existing) return
-
-    const socket = io({
-      path: '/socket.io/',
-      query: { XTransformPort: '3003' },
-    })
-
-    socket.on('connect', () => {
-      socket.emit('authenticate', { userId })
-      set({ connected: true })
-    })
-
-    socket.on('notification', (data: NotificationData) => {
-      get().addNotification(data)
-    })
-
-    socket.on('disconnect', () => {
-      set({ connected: false })
-    })
-
-    set({ socket })
-  },
-
-  disconnectSocket: () => {
-    const socket = get().socket
-    if (socket) {
-      socket.disconnect()
-      set({ socket: null, connected: false })
     }
   },
 
