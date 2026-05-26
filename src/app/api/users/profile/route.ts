@@ -60,7 +60,7 @@ export async function PUT(request: Request) {
     })
     await setSessionCookie(token)
 
-    return NextResponse.json(updatedUser)
+    return NextResponse.json({ user: updatedUser })
   } catch (error) {
     console.error('Error updating profile:', error)
     return NextResponse.json(
