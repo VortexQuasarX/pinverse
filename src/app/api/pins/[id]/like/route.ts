@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getSession } from '@/lib/auth'
+import { pushNotification } from '@/lib/notify'
 
 export async function POST(
   _request: NextRequest,
@@ -44,15 +45,25 @@ export async function POST(
           where: { id: session.id },
           select: { name: true },
         })
+        const message = `${liker?.name || 'Someone'} liked your pin "${pin.title}"`
         await db.notification.create({
           data: {
             type: 'LIKE',
-            message: `${liker?.name || 'Someone'} liked your pin "${pin.title}"`,
+            message,
             fromUserId: session.id,
             toUserId: pin.authorId,
             pinId,
           },
         }).catch((err) => console.error('Error creating like notification:', err))
+
+        // Push notification to realtime service (fire-and-forget)
+        pushNotification({
+          userId: pin.authorId,
+          type: 'like',
+          message,
+          fromUserId: session.id,
+          pinId,
+        }).catch(() => {})
       }
     }
 

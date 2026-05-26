@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getSession } from '@/lib/auth'
+import { pushNotification } from '@/lib/notify'
 
 export async function POST(
   request: Request,
@@ -72,14 +73,23 @@ export async function POST(
         where: { id: session.id },
         select: { name: true },
       })
+      const message = `${follower?.name || 'Someone'} started following you`
       await db.notification.create({
         data: {
           type: 'FOLLOW',
-          message: `${follower?.name || 'Someone'} started following you`,
+          message,
           fromUserId: session.id,
           toUserId: id,
         },
       }).catch((err) => console.error('Error creating follow notification:', err))
+
+      // Push notification to realtime service (fire-and-forget)
+      pushNotification({
+        userId: id,
+        type: 'follow',
+        message,
+        fromUserId: session.id,
+      }).catch(() => {})
     }
 
     // Get updated followers count

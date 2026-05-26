@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getSession } from '@/lib/auth'
+import { pushNotification } from '@/lib/notify'
 
 export async function GET(
   request: NextRequest,
@@ -95,15 +96,25 @@ export async function POST(
         where: { id: session.id },
         select: { name: true },
       })
+      const message = `${commenter?.name || 'Someone'} commented on your pin "${pin.title}"`
       await db.notification.create({
         data: {
           type: 'COMMENT',
-          message: `${commenter?.name || 'Someone'} commented on your pin "${pin.title}"`,
+          message,
           fromUserId: session.id,
           toUserId: pin.authorId,
           pinId,
         },
       }).catch((err) => console.error('Error creating comment notification:', err))
+
+      // Push notification to realtime service (fire-and-forget)
+      pushNotification({
+        userId: pin.authorId,
+        type: 'comment',
+        message,
+        fromUserId: session.id,
+        pinId,
+      }).catch(() => {})
     }
 
     return NextResponse.json(comment, { status: 201 })
