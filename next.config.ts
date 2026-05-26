@@ -1,7 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: "standalone",
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -30,6 +29,8 @@ const nextConfig: NextConfig = {
   },
   allowedDevOrigins: [
     "preview-chat-8c4462e1-af32-4851-8cab-a72510cf893a.space-z.ai",
+    ".space-z.ai",
+    "localhost",
   ],
 };
 

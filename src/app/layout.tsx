@@ -22,6 +22,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_URL || "http://localhost:3000"),
   title: "Pinverse — Discover, Save & Share Creative Ideas",
   description:
     "A Pinterest-inspired platform to discover, save, and share creative visual content. Explore curated collections, organize your favorite ideas, and connect with a community of creators.",
@@ -73,7 +74,7 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: "/favicon.svg",
-    apple: "/icon-192.png",
+    apple: "/icon-192.svg",
   },
   other: {
     "apple-mobile-web-app-capable": "yes",

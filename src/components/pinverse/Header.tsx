@@ -91,7 +91,8 @@ export function Header() {
   }
 
   const getNotifIcon = (type: string) => {
-    switch (type) {
+    const t = type.toLowerCase()
+    switch (t) {
       case 'like': return <Heart className="w-4 h-4 text-red-500" />
       case 'comment': return <Bookmark className="w-4 h-4 text-blue-500" />
       case 'follow': return <User className="w-4 h-4 text-green-500" />

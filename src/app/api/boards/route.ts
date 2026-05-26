@@ -21,7 +21,7 @@ export async function GET() {
       orderBy: { updatedAt: 'desc' },
     })
 
-    return NextResponse.json(boards)
+    return NextResponse.json({ boards })
   } catch (error) {
     console.error('Error fetching boards:', error)
     return NextResponse.json(
