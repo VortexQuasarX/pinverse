@@ -186,11 +186,39 @@ export const usePinStore = create<PinState & PinActions>((set, get) => ({
   },
 
   toggleLike: async (pinId) => {
+    const { pins, currentPin } = get()
+    
+    const applyOptimisticLike = (pin: PinData, likedState: boolean) => {
+      const isLikedBefore = pin.isLiked ?? false
+      const likesChange = likedState ? (isLikedBefore ? 0 : 1) : (isLikedBefore ? -1 : 0)
+      return {
+        ...pin,
+        isLiked: likedState,
+        _count: {
+          ...pin._count,
+          likes: Math.max(0, pin._count.likes + likesChange),
+        }
+      }
+    }
+
+    const targetPin = pins.find(p => p.id === pinId) || (currentPin?.id === pinId ? currentPin : null)
+    if (!targetPin) return
+
+    const originallyLiked = targetPin.isLiked ?? false
+    const optimisticLiked = !originallyLiked
+
+    const updatePinOptimistic = (pin: PinData) => pin.id === pinId ? applyOptimisticLike(pin, optimisticLiked) : pin
+    set((state) => ({
+      pins: state.pins.map(updatePinOptimistic),
+      currentPin: state.currentPin ? updatePinOptimistic(state.currentPin) : null,
+    }))
+
     try {
       const res = await fetch(`/api/pins/${pinId}/like`, { method: 'POST' })
+      if (!res.ok) throw new Error("Failed to like")
       const data = await res.json()
       
-      const updatePin = (pin: PinData) => {
+      const updatePinOfficial = (pin: PinData) => {
         if (pin.id === pinId) {
           return {
             ...pin,
@@ -205,20 +233,52 @@ export const usePinStore = create<PinState & PinActions>((set, get) => ({
       }
 
       set((state) => ({
-        pins: state.pins.map(updatePin),
-        currentPin: state.currentPin ? updatePin(state.currentPin) : null,
+        pins: state.pins.map(updatePinOfficial),
+        currentPin: state.currentPin ? updatePinOfficial(state.currentPin) : null,
       }))
     } catch {
-      // silently fail
+      const updatePinRollback = (pin: PinData) => pin.id === pinId ? applyOptimisticLike(pin, originallyLiked) : pin
+      set((state) => ({
+        pins: state.pins.map(updatePinRollback),
+        currentPin: state.currentPin ? updatePinRollback(state.currentPin) : null,
+      }))
     }
   },
 
   toggleSave: async (pinId) => {
+    const { pins, currentPin } = get()
+
+    const applyOptimisticSave = (pin: PinData, savedState: boolean) => {
+      const isSavedBefore = pin.isSaved ?? false
+      const savesChange = savedState ? (isSavedBefore ? 0 : 1) : (isSavedBefore ? -1 : 0)
+      return {
+        ...pin,
+        isSaved: savedState,
+        _count: {
+          ...pin._count,
+          saves: Math.max(0, pin._count.saves + savesChange),
+        }
+      }
+    }
+
+    const targetPin = pins.find(p => p.id === pinId) || (currentPin?.id === pinId ? currentPin : null)
+    if (!targetPin) return
+
+    const originallySaved = targetPin.isSaved ?? false
+    const optimisticSaved = !originallySaved
+
+    const updatePinOptimistic = (pin: PinData) => pin.id === pinId ? applyOptimisticSave(pin, optimisticSaved) : pin
+    set((state) => ({
+      pins: state.pins.map(updatePinOptimistic),
+      currentPin: state.currentPin ? updatePinOptimistic(state.currentPin) : null,
+    }))
+
     try {
       const res = await fetch(`/api/pins/${pinId}/save`, { method: 'POST' })
+      if (!res.ok) throw new Error("Failed to save")
       const data = await res.json()
       
-      const updatePin = (pin: PinData) => {
+      const updatePinOfficial = (pin: PinData) => {
         if (pin.id === pinId) {
           return {
             ...pin,
@@ -233,11 +293,15 @@ export const usePinStore = create<PinState & PinActions>((set, get) => ({
       }
 
       set((state) => ({
-        pins: state.pins.map(updatePin),
-        currentPin: state.currentPin ? updatePin(state.currentPin) : null,
+        pins: state.pins.map(updatePinOfficial),
+        currentPin: state.currentPin ? updatePinOfficial(state.currentPin) : null,
       }))
     } catch {
-      // silently fail
+      const updatePinRollback = (pin: PinData) => pin.id === pinId ? applyOptimisticSave(pin, originallySaved) : pin
+      set((state) => ({
+        pins: state.pins.map(updatePinRollback),
+        currentPin: state.currentPin ? updatePinRollback(state.currentPin) : null,
+      }))
     }
   },
 

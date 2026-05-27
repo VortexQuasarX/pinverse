@@ -161,7 +161,7 @@ export const PinCard = memo(function PinCard({ pin, index = 0 }: PinCardProps) {
               }`}
               style={{ minHeight: '200px' }}
               loading="lazy"
-              unoptimized={pin.imageUrl.startsWith('http')}
+              unoptimized={pin.imageUrl.startsWith('http') || pin.imageUrl.startsWith('data:')}
               onLoad={() => setImageLoaded(true)}
               onError={() => setImageError(true)}
             />

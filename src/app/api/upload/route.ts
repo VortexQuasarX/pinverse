@@ -48,17 +48,8 @@ function getExtensionFromFormat(format: string): string {
 }
 
 async function getImageDimensions(
-  buffer: Buffer
+  _buffer: Buffer
 ): Promise<{ width: number; height: number } | null> {
-  try {
-    const sharp = await import("sharp");
-    const metadata = await sharp.default(buffer).metadata();
-    if (metadata.width && metadata.height) {
-      return { width: metadata.width, height: metadata.height };
-    }
-  } catch {
-    // sharp not available, skip dimension check
-  }
   return null;
 }
 

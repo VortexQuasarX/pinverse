@@ -23,16 +23,25 @@ export class LocalStorageProvider implements StorageProvider {
   async save(
     filename: string,
     buffer: Buffer,
-    _contentType: string
+    contentType: string
   ): Promise<string> {
-    if (!fs.existsSync(this.uploadDir)) {
-      fs.mkdirSync(this.uploadDir, { recursive: true });
+    try {
+      if (!fs.existsSync(this.uploadDir)) {
+        fs.mkdirSync(this.uploadDir, { recursive: true });
+      }
+
+      const filePath = path.join(this.uploadDir, filename);
+      fs.writeFileSync(filePath, buffer);
+
+      return `/uploads/${filename}`;
+    } catch (error: any) {
+      if (error.code === 'EROFS' || error.message?.includes('read-only')) {
+        console.warn("Read-only filesystem detected. Falling back to Base64 Data URL storage.");
+        const base64 = buffer.toString('base64');
+        return `data:${contentType};base64,${base64}`;
+      }
+      throw error;
     }
-
-    const filePath = path.join(this.uploadDir, filename);
-    fs.writeFileSync(filePath, buffer);
-
-    return `/uploads/${filename}`;
   }
 
   async delete(filename: string): Promise<void> {

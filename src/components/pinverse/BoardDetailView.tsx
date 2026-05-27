@@ -165,7 +165,7 @@ export function BoardDetailView() {
                     className="w-full object-cover"
                     style={{ minHeight: '200px' }}
                     loading="lazy"
-                    unoptimized={pin.imageUrl.startsWith('http')}
+                    unoptimized={pin.imageUrl.startsWith('http') || pin.imageUrl.startsWith('data:')}
                   />
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
                 </div>

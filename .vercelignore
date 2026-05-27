@@ -1,0 +1,9 @@
+.env
+.env.*
+!.env.example
+db/
+prisma/db/
+.cursor/
+*.log
+server.log
+.git

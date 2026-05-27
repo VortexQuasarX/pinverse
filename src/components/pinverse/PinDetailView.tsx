@@ -278,7 +278,7 @@ export function PinDetailView() {
               width={800}
               height={600}
               className="w-full h-auto max-h-[80vh] object-contain"
-              unoptimized={currentPin.imageUrl.startsWith('http')}
+              unoptimized={currentPin.imageUrl.startsWith('http') || currentPin.imageUrl.startsWith('data:')}
               priority
             />
           </div>
